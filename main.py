@@ -14,7 +14,7 @@ Breakout:
 TODO:
     - add physics to cause ball to change x_velocity when hit from different sides by the paddle
 
-    - solve paddle bug
+    - SOLVED: paddle bug
 
     - rewrite function for lay_bricks in a way that labels each one on creation. So, brick_0 through brick_99 will be variables.
 """
@@ -43,6 +43,8 @@ paddle_coords = paddle_params.values()
 
 def main():
     # Backend setup.
+    x_velocity = random_excluding_zero(num_lst)
+    y_velocity = 10
     num_lst = init_num_lst()
     num_bricks = 100
     lives = 3
@@ -56,9 +58,6 @@ def main():
     paddle_params = update_paddle_params(canvas, paddle)  # get params for paddle now that it exists
     lives_left = life_tracker(canvas, lives)
 
-    x_velocity = random_excluding_zero(num_lst)
-    y_velocity = 10
-
     while num_bricks > 0 and lives > 0:  # animation loop
 
         ### Check ###
@@ -69,7 +68,7 @@ def main():
         )
 
         ### Check ###
-        # check for collisions with other canvas objects, minus the paddle and walls once per loop
+        # check for collisions with other canvas objects once per loop
         x_velocity, y_velocity, num_bricks = collision_check(
             canvas,
             paddle,
@@ -87,6 +86,9 @@ def main():
             lives_left
         )
 
+        ### Paddle collision check ###
+        # x_velocity, y_velocity = paddle_collision_check(canvas, paddle, ball, x_velocity, y_velocity)
+
         ### Animation ###
         # Mouse tracking for paddle
         mouse_x = canvas.get_mouse_x()
@@ -94,7 +96,6 @@ def main():
         paddle_params = update_paddle_params(canvas, paddle)
 
         ### Paddle collision check ###
-        # This goes here because we are checking the paddle coords for collisions rather than the ball coords.
         x_velocity, y_velocity = paddle_collision_check(canvas, paddle, ball, x_velocity, y_velocity)
 
         ### Animation ###
@@ -153,16 +154,20 @@ def collision_check(canvas, paddle, x_velocity, y_velocity, num_bricks):
 def paddle_collision_check(canvas, paddle, ball, x_velocity, y_velocity):
     """
     Check for collisions with the ball from the paddle's p.o.v. We want to see if checking for paddle bounces after animating
-    the paddle but before animating the ball will solve the stuck_inside_paddle bug
+    the paddle but before animating the ball will solve the stuck_inside_paddle bug.
 
-    *This partially worked. The ball still gets stuck when you flick it juuust right really really fast.
+    *v1: This partially worked. The ball still gets stuck when you flick it juuust right really really fast.
+    *v2: Solution was to add a check to see if y_velocity was already negative and only bounce the ball up but not back down.
+        if y_velocity > 0: flip y_velocity
     """
     overlapping = canvas.find_overlapping(*paddle_coords)
     if len(overlapping) > 1:
         if ball in overlapping:
-            y_velocity = -y_velocity
+            if y_velocity > 0:
+                y_velocity = -y_velocity
 
     return x_velocity, y_velocity
+
 
 def ball_touches_bottom_wall():
     """
