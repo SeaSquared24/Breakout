@@ -156,7 +156,7 @@ def paddle_collision_check(canvas, paddle, ball, x_velocity, y_velocity):
     Check for collisions with the ball from the paddle's p.o.v. We want to see if checking for paddle bounces after animating
     the paddle but before animating the ball will solve the stuck_inside_paddle bug.
 
-    *v1: This partially worked. The ball still gets stuck when you flick it juuust right really really fast.
+    *v1: This partially worked. The ball still gets stuck when you flick it juuust right really, really fast.
     *v2: Solution was to add a check to see if y_velocity was already negative and only bounce the ball up but not back down.
         if y_velocity > 0: flip y_velocity
     """
