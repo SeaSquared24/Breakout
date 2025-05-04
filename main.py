@@ -184,7 +184,7 @@ def init_ball():
         CANVAS_WIDTH/2 + BALL_DIAMETER,
         CANVAS_HEIGHT/2 + BALL_DIAMETER,
         fill="blue",
-        tag="ball"
+        tags="ball"
     )
     return ball, x_velocity
 
@@ -200,7 +200,7 @@ def init_paddle():
         CANVAS_WIDTH/2 + PADDLE_WIDTH/2,
         PADDLE_Y + PADDLE_HEIGHT,
         fill="black",
-        tag="paddle"
+        tags="paddle"
     )
     return paddle
 
