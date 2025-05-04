@@ -6,6 +6,7 @@ About this program:
 Constants are defined in all caps at the top of the program.
 There are three globals: window, canvas, and run. These should be the only ones.
 """
+# TODO: add opening screen with a button to start game, return to opening screen after game ends.
 
 import tkinter as tk
 from tkinter import Canvas
@@ -33,11 +34,13 @@ def main():
     global run
     run = True
 
+    game_over = False
+
     # Creating the window:
     global window
     window = tk.Tk()
     window.title("Breakout")
-    window.geometry('505x605')
+    window.geometry(f"{CANVAS_WIDTH + 5}x{CANVAS_HEIGHT + 5}")
     window.resizable(False, False)
     window.protocol("WM_DELETE_WINDOW", handler)
 
@@ -52,42 +55,47 @@ def main():
     # bricks are removed using index number of the output of canvas.find_overlapping when the ball touches them.
     lay_bricks()
     num_bricks = 100
-    x_velocity = random_excluding_zero()
     y_velocity = 10
     paddle = init_paddle()
-    ball = init_ball()
+    ball, x_velocity = init_ball()
 
     lives_left = 3
     life_board = init_life_board(lives_left)
 
     while run:
         refresh_window()
-        if bricks_left(num_bricks) and still_have_lives(lives_left):
+        # Animation Loop. Uses an if because the window still needs to refresh.
+        if not game_over:
             update_paddle_position(paddle)
-
-            update_ball_position(ball, x_velocity, y_velocity) #bugged. ball_coords list comes up empty
+            update_ball_position(ball, x_velocity, y_velocity)
 
             x_velocity, y_velocity = bounce(ball, paddle, x_velocity, y_velocity, num_bricks)
-            y_velocity, num_bricks = brick_collision_check(ball, paddle, y_velocity, num_bricks)
+            y_velocity, num_bricks = brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks)
 
             if ball_touches_bottom_wall(ball):
                 # Lose a life and reset ball to center when it falls off bottom of canvas.
                 life_board, lives_left = update_life_board(lives_left, life_board)
-                canvas.delete(ball)
-                ball, x_velocity = init_ball()
+                ball, x_velocity = reset_ball(ball)
+                time.sleep(0.1)
 
-
+            game_over = check_game_state(num_bricks, lives_left, game_over)
             time.sleep(DELAY)
+
+        else:
+            end_game(ball, num_bricks)
 
     window.destroy()
 
-def bricks_left(num_bricks):
-    if num_bricks > 0:
+def check_game_state(num_bricks, lives_left, game_over):
+    if not (bricks_left(num_bricks) and still_have_lives(lives_left)):
         return True
+    return False
+
+def bricks_left(num_bricks):
+    return num_bricks > 0
 
 def still_have_lives(lives_left):
-    if lives_left > 0:
-        return True
+    return lives_left > 0
 
 def init_life_board(lives_left):
     life_board = canvas.create_text(
@@ -107,6 +115,9 @@ def update_life_board(lives_left, life_board):
 
 def bounce(ball, paddle, x_velocity, y_velocity, num_bricks):
     ball_coords = canvas.coords(ball)
+
+    if len(ball_coords) != 4:
+        return x_velocity, y_velocity  # Skip bounce logic if coords are invalid
 
     # if ball touches right wall
     if ball_coords[2] >= CANVAS_WIDTH and ball_moving_right(x_velocity):
@@ -128,30 +139,42 @@ def bounce(ball, paddle, x_velocity, y_velocity, num_bricks):
     return x_velocity, y_velocity
 
 def ball_moving_right(x_velocity):
-    if x_velocity > 0:
-        return True
+    return x_velocity > 0
 
 def ball_moving_left(x_velocity):
-    if x_velocity < 0:
-        return True
+    return x_velocity < 0
 
 def ball_moving_up(y_velocity):
-    if y_velocity < 0:
-        return True
+    return y_velocity < 0
 
-def brick_collision_check(ball, paddle, y_velocity, num_bricks):
-    # if ball touches brick
+def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks):
     ball_coords = canvas.coords(ball)
     overlapping = canvas.find_overlapping(*ball_coords)
-    if len(overlapping) > 1 and paddle not in overlapping:
-        y_velocity = -y_velocity
-        canvas.delete(overlapping[0])
-        num_bricks -= 1
+
+    brick_hit = False  # Track if we hit any bricks
+
+    for item in overlapping:
+        if item in (paddle, life_board):
+            continue # if the overlapping item is the paddle or lifeboard, skip
+        if "brick" in canvas.gettags(item):
+            canvas.delete(item)
+            num_bricks -= 1
+            brick_hit = True  # Mark that we should invert y_velocity
+
+    if brick_hit:
+        y_velocity = -y_velocity # bounce
+
     return y_velocity, num_bricks
 
 def update_ball_position(ball, x_velocity, y_velocity):
-    x1, y1, x2, y2 = canvas.coords(ball)
-    canvas.coords(ball, x1 + x_velocity, y1 + y_velocity, x2 + x_velocity, y2 + y_velocity)
+    coords = canvas.coords(ball)
+    if not coords:
+        return  # Ball has been deleted or not initialized
+    canvas.moveto(ball, coords[0] + x_velocity, coords[1] + y_velocity)
+
+def reset_ball(ball):
+    canvas.delete(ball)
+    return init_ball()
 
 def init_ball():
     x_velocity = random_excluding_zero()
@@ -166,7 +189,8 @@ def init_ball():
 
 def update_paddle_position(paddle):
     abs_coord_x = window.winfo_pointerx() - window.winfo_rootx()
-    canvas.moveto(paddle, abs_coord_x - PADDLE_WIDTH/2, PADDLE_Y)
+    new_x = max(0, min(CANVAS_WIDTH - PADDLE_WIDTH, abs_coord_x - PADDLE_WIDTH/2))
+    canvas.moveto(paddle, new_x, PADDLE_Y)
 
 def init_paddle():
     paddle = canvas.create_rectangle(
@@ -179,12 +203,11 @@ def init_paddle():
     return paddle
 
 def ball_touches_bottom_wall(ball):
-    """
-    if bottom of ball touches bottom wall of canvas, return True.
-    """
-    y2 = canvas.coords(ball)[3]
-    if y2 >= CANVAS_HEIGHT:
-        return True
+    coords = canvas.coords(ball)
+    if len(coords) != 4:
+        return False
+    y2 = coords[3]
+    return y2 >= CANVAS_HEIGHT
 
 def lay_brick_row(brick_top_y, color):
     """
@@ -202,7 +225,8 @@ def lay_brick_row(brick_top_y, color):
             brick_right_x + (BRICK_WIDTH + BRICK_GAP) * i,# this one has to match the operations on left_x because if it doesn't the bricks end up upside down.
             brick_bottom_y,
             fill=color,
-            outline=''
+            outline='',
+            tags="brick"
         )
 
 def lay_bricks():
@@ -224,17 +248,13 @@ def lay_bricks():
             lay_brick_row(brick_top_y, 'cyan')
 
 def random_excluding_zero():
-    """
-    Only used to shoot the ball at a new angle. Roll random ints between -10 and 10. The list excludes 0.
-    """
+    # Only used to shoot the ball at a new angle. Roll random ints between -8 and 8. The list excludes 0.
     num_lst = init_num_lst()
     result = random.choice(num_lst)
     return result
 
 def init_num_lst():
-    """
-    Only used for random_excluding_zero(). Creates a list of ints from -10 to 10 without zero in it.
-    """
+    # Only used for random_excluding_zero(). Creates a list of ints from -8 to 8 without zero in it.
     num_lst = []
     for i in range(-8, 9):
         if i != 0:
@@ -250,6 +270,29 @@ def handler():
     # Allows graceful exit when window is closed.
     global run
     run = False
+
+def end_game(ball, num_bricks):
+    # End game with either a congrats or wompwomp.
+    if num_bricks == 0:
+        canvas.delete(ball)
+        congrats = canvas.create_text(
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 2,
+            anchor = 'center',
+            text = 'You Won!',
+            font = ('Arial', 40),
+            fill = 'red'
+        )
+    elif num_bricks > 0:
+        canvas.delete(ball)
+        wompwomp = canvas.create_text(
+            CANVAS_WIDTH / 2,
+            CANVAS_HEIGHT / 2,
+            anchor = 'center',
+            text = 'Oh No! You Lost.',
+            font = ('Arial', 40),
+            fill = 'black'
+        )
 
 if __name__ == '__main__':
     main()
