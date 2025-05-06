@@ -7,6 +7,7 @@ Constants are defined in all caps at the top of the program.
 There are three globals: window, canvas, and run. These should be the only ones.
 """
 # TODO: add opening screen with a button to start game, return to opening screen after game ends.
+# TODO: put objects and the game state in class form
 
 import tkinter as tk
 from tkinter import Canvas
