@@ -25,12 +25,13 @@ BALL_DIAMETER = 20
 BALL_RADIUS = BALL_DIAMETER/2
 
 BRICK_GAP = 5
-BRICK_WIDTH = (CANVAS_WIDTH - BRICK_GAP * 9) / 10
+BRICK_WIDTH = (CANVAS_WIDTH - 10 - BRICK_GAP * 9) / 10 # Canvas width minus 10 seems to keep the bricks perfectly within the border.
 BRICK_HEIGHT = 10
+UPPER_BOUND = 50
 
 DELAY = 0.01
 
-# instantiating global variables before referring to them in main.
+# Instantiating global variables before referring to them in main.
 run = True
 
 # Creating the window:
@@ -42,6 +43,7 @@ window.resizable(False, False)
 # Creating the canvas containing the game:
 canvas = Canvas(window, width=CANVAS_WIDTH, height=CANVAS_HEIGHT, bg="white")
 canvas.pack()
+border = canvas.create_rectangle(1, UPPER_BOUND - 7, CANVAS_WIDTH, CANVAS_HEIGHT, fill='', outline='black', tags='border')
 window.update()
 
 def main():
@@ -63,6 +65,7 @@ def main():
 
     while run:
         refresh_window()
+
         # Animation Loop. Uses an if because the window still needs to refresh.
         if not game_over:
             update_paddle_position(paddle)
@@ -109,9 +112,9 @@ def still_have_lives(lives_left):
 def init_life_board(lives_left):
     life_board = canvas.create_text(
         CANVAS_WIDTH - 50,
-        CANVAS_HEIGHT - 50,
-        text = str(lives_left),
-        font = ('Arial', 30),
+        20,
+        text = f"Lives: {lives_left}",
+        font = ('Arial', 20),
         fill = 'black'
     )
     return life_board
@@ -139,7 +142,7 @@ def bounce(ball, paddle, x_velocity, y_velocity):
             x_velocity = -x_velocity
 
         # if ball touches top wall
-        elif ball_coords[1] <= 0 and ball_moving_up(y_velocity):
+        elif ball_coords[1] <= UPPER_BOUND and ball_moving_up(y_velocity):
             y_velocity = -y_velocity
 
         # if ball touches paddle
@@ -147,7 +150,7 @@ def bounce(ball, paddle, x_velocity, y_velocity):
             y_velocity = -y_velocity
             if ball_coords[0] > paddle_coords[2] - PADDLE_WIDTH/4 and ball_moving_left(x_velocity): # ball touches right quarter of paddle
                 x_velocity = -x_velocity
-            if ball_coords[2] < paddle_coords[0] + PADDLE_WIDTH/4 and ball_moving_right(x_velocity): # ball touches left quarter of padddle
+            if ball_coords[2] < paddle_coords[0] + PADDLE_WIDTH/4 and ball_moving_right(x_velocity): # ball touches left quarter of paddle
                 x_velocity = -x_velocity
 
         return x_velocity, y_velocity
@@ -242,7 +245,7 @@ def lay_brick_row(brick_top_y, color):
     row and color each time it runs.
     """
     for i in range(10):
-        brick_left_x = 0
+        brick_left_x = 5 + canvas.coords(border)[0]
         brick_right_x = brick_left_x + BRICK_WIDTH
         brick_bottom_y = brick_top_y + BRICK_HEIGHT
         # Just going across one row here (only manipulating x values). New rows handled in lay_bricks.
@@ -262,7 +265,7 @@ def lay_bricks():
     function: two rows red, two orange, etc.
     """
     for i in range(10):
-        brick_top_y = i * (BRICK_HEIGHT + BRICK_GAP) # first instance of brick_top_y variable
+        brick_top_y = (UPPER_BOUND + 5) + i * (BRICK_HEIGHT + BRICK_GAP) # first instance of brick_top_y variable
         if i <= 1:
             lay_brick_row(brick_top_y, 'red')
         elif 2 <= i <= 3:
