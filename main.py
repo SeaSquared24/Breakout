@@ -167,14 +167,17 @@ def ball_moving_up(y_velocity):
 def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks, speed_multi):
     ball_coords = canvas.coords(ball)
     overlapping = canvas.find_overlapping(*ball_coords)
+    bounced = False
 
     for item in overlapping:
         if item in (paddle, life_board):
             continue # if the overlapping item is the paddle or lifeboard, skip
-        if "brick" in canvas.gettags(item):
+        elif "brick" in canvas.gettags(item):
             canvas.delete(item)
             num_bricks -= 1
-            y_velocity = -y_velocity  # bounce
+            if bounced == False:
+                bounced = True
+                y_velocity = -y_velocity  # bounce
             if num_bricks % 10 == 0: # num_bricks has already gone down so it shouldn't trigger on 100 bricks.
                 speed_multi = update_spdmulti(speed_multi)
 
