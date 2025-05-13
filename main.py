@@ -8,8 +8,6 @@ There are three globals: window, canvas, and run. These should be the only ones.
 """
 # TODO: add opening screen with a button to start game, return to opening screen after game ends.
 # TODO: put objects and the game state in class form
-# TODO: upgrade paddle physics to cause changes in the bounce angle
-# TODO: add speed multiplier
 
 import tkinter as tk
 from tkinter import Canvas
@@ -53,6 +51,7 @@ def main():
     # Game setup.
     lay_bricks()
     num_bricks = 100
+    speed_multi = 1.0
     y_velocity = 3
     paddle = init_paddle()
     ball, x_velocity = init_ball()
@@ -67,14 +66,24 @@ def main():
         # Animation Loop. Uses an if because the window still needs to refresh.
         if not game_over:
             update_paddle_position(paddle)
-            update_ball_position(ball, x_velocity, y_velocity)
+            update_ball_position(ball, x_velocity, y_velocity, speed_multi)
 
-            x_velocity, y_velocity = bounce(ball, paddle, x_velocity, y_velocity)
-            y_velocity, num_bricks = brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks)
+            x_velocity, y_velocity = bounce(
+                ball, paddle,
+                x_velocity, y_velocity
+            )
+
+            y_velocity, num_bricks, speed_multi = brick_collision_check(
+                ball, paddle, life_board,
+                y_velocity, num_bricks, speed_multi
+            )
 
             if ball_touches_bottom_wall(ball):
                 # Lose a life and reset ball to center when it falls off bottom of canvas.
-                life_board, lives_left = update_life_board(lives_left, life_board)
+                life_board, lives_left = update_life_board(
+                    lives_left, life_board
+                )
+
                 ball, x_velocity = reset_ball(ball)
                 time.sleep(0.1)
 
@@ -116,6 +125,7 @@ def update_life_board(lives_left, life_board):
 def bounce(ball, paddle, x_velocity, y_velocity):
     ball_coords = canvas.coords(ball)
     overlapping = canvas.find_overlapping(*ball_coords)
+    paddle_coords = canvas.coords(paddle)
 
     if len(ball_coords) != 4:
         return x_velocity, y_velocity  # Skip bounce logic if coords are invalid
@@ -135,6 +145,10 @@ def bounce(ball, paddle, x_velocity, y_velocity):
         # if ball touches paddle
         elif len(overlapping) > 1 and paddle in overlapping and y_velocity > 0:
             y_velocity = -y_velocity
+            if ball_coords[0] > paddle_coords[2] - PADDLE_WIDTH/4 and ball_moving_left(x_velocity): # ball touches right quarter of paddle
+                x_velocity = -x_velocity
+            if ball_coords[2] < paddle_coords[0] + PADDLE_WIDTH/4 and ball_moving_right(x_velocity): # ball touches left quarter of padddle
+                x_velocity = -x_velocity
 
         return x_velocity, y_velocity
 
@@ -147,11 +161,9 @@ def ball_moving_left(x_velocity):
 def ball_moving_up(y_velocity):
     return y_velocity < 0
 
-def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks):
+def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks, speed_multi):
     ball_coords = canvas.coords(ball)
     overlapping = canvas.find_overlapping(*ball_coords)
-
-    brick_hit = False  # Track if we hit any bricks
 
     for item in overlapping:
         if item in (paddle, life_board):
@@ -159,18 +171,21 @@ def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks):
         if "brick" in canvas.gettags(item):
             canvas.delete(item)
             num_bricks -= 1
-            brick_hit = True  # Mark that we should invert y_velocity
+            y_velocity = -y_velocity  # bounce
+            if num_bricks % 10 == 0: # num_bricks has already gone down so it shouldn't trigger on 100 bricks.
+                speed_multi = update_spdmulti(speed_multi)
 
-    if brick_hit:
-        y_velocity = -y_velocity # bounce
+    return y_velocity, num_bricks, speed_multi
 
-    return y_velocity, num_bricks
+def update_spdmulti(speed_multi):
+    speed_multi += 0.2
+    return speed_multi
 
-def update_ball_position(ball, x_velocity, y_velocity):
+def update_ball_position(ball, x_velocity, y_velocity, speed_multi):
     coords = canvas.coords(ball)
     if not coords:
         return  # Ball has been deleted or not initialized
-    canvas.move(ball, x_velocity, y_velocity)
+    canvas.move(ball, x_velocity, y_velocity * speed_multi)
 
 def reset_ball(ball):
     canvas.delete(ball)
