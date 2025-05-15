@@ -29,7 +29,7 @@ def on_mouse_move(event):
 def update_lifeboard():
     game_window.canvas.delete('lifeboard')
     game_window.canvas.create_text(
-        game_window.CANVAS_WIDTH - 60,
+        game_window.canvas_width - 60,
         20,
         font=('Arial', 20),
         text=f'Lives: {GameState.lives_left}',

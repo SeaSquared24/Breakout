@@ -3,18 +3,19 @@ from tkinter import Canvas
 import time
 
 class Window:
-    CANVAS_WIDTH = 500
-    CANVAS_HEIGHT = 600
+    canvas_width = 500
+    canvas_height = 600
+    offset_y = 60
 
     def __init__(self):
         self.run = True
         self.root = tk.Tk()
         self.root.title("Breakout")
-        self.root.geometry(f"{self.CANVAS_WIDTH + 5}x{self.CANVAS_HEIGHT + 5}")
+        self.root.geometry(f"{self.canvas_width + 5}x{self.canvas_height + 5}")
         self.root.resizable(False, False)
         self.root.protocol("WM_DELETE_WINDOW", self.handler)
 
-        self.canvas = Canvas(self.root, width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT, bg="white")
+        self.canvas = Canvas(self.root, width=self.canvas_width, height=self.canvas_height, bg="white")
         self.canvas.pack()
 
     def handler(self):
@@ -26,23 +27,55 @@ class Window:
         self.root.update()
         time.sleep(GameState.delay)
 
-class GameState(Window):
+class GameState():
     delay = 0.01
     lives_left = 3
     num_bricks = 100
     speed_multi = 1.0
 
+    def __init__(self, canvas):
+        self.canvas = canvas
+
+    def update_lifeboard(self):
+        self.canvas.delete('lifeboard')
+        self.canvas.create_text(  # Create lifeboard
+            Window.canvas_width - 60,
+            20,
+            font=('Arial', 20),
+            text=f'Lives: {GameState.lives_left}',
+            tags='lifeboard'
+        )
+
     def update_spdmulti(self):
         self.speed_multi += 0.2
 
-class Bricks(Window):
-    rows, cols = 10, 10
-    padding = 5
-    width = (Window.CANVAS_WIDTH - padding * 9) / 10
-    height = 10
-    offset_y = 60
+class Bricks():
+    def __init__(self, canvas):
+        self.canvas = canvas
+        self.rows, self.cols = 10, 10
+        self.padding = 5
+        self.width = (Window.canvas_width - self.padding * 9) / 10
+        self.height = 10
+
+        for row in range(self.rows):
+            if row <= 1:
+                brick_color = 'red'
+            elif 2 <= row <= 3:
+                brick_color = 'orange'
+            elif 4 <= row <= 5:
+                brick_color = 'yellow'
+            elif 6 <= row <= 7:
+                brick_color = 'lime'
+            elif row >= 8:
+                brick_color = 'cyan'
+            for col in range(self.cols):
+                x = col * (self.width + self.padding)
+                y = Window.offset_y + row * (self.height + self.padding)
+                self.canvas.create_rectangle(x, y, x + self.width, y + self.height, fill=brick_color,
+                                                    outline='', tags='brick')
 
 class Ball:
+    # todo: randomize ball direction.
     def __init__(self, canvas):
         self.canvas = canvas
         self.radius = 10
@@ -64,9 +97,9 @@ class Ball:
         # Bounce off walls
         if self.x - self.radius <= 0 or self.x + self.radius >= self.canvas.winfo_width(): # sides
             self.dx *= -1
-        elif self.y - self.radius <= Bricks.offset_y: # top wall
+        elif self.y - self.radius <= Window.offset_y: # top wall
             self.dy *= -1
-        elif self.y + self.radius >= self.canvas.winfo_height(): # bottom wall, lose a life and reset position.
+        elif self.y + self.radius >= self.canvas.winfo_height(): # bottom wall, lose a life and reset position
             GameState.lives_left -= 1
             self.reset()
 
@@ -96,6 +129,7 @@ class Ball:
         for item in overlapping:
             if "paddle" in self.canvas.gettags(item) and self.dy > 0: # if ball touches paddle
                 self.dy *= -1
+                # todo: add paddle physics
             elif "brick" in self.canvas.gettags(item):
                 self.canvas.delete(item)
                 GameState.num_bricks -= 1
