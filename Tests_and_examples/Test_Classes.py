@@ -1,20 +1,22 @@
 from Classes import *
 
 game_window = Window()
+game_window.refresh_window()
 ball = Ball(game_window.canvas)
 paddle = Paddle(game_window.canvas)
 
 def main():
     initialize_bricks()
     update_lifeboard()
-    game_window.root.bind('<Motion>', on_mouse_move) # TODO: bugged
     game_loop()  # Start the repeating loop
     game_window.root.mainloop()  # Start the Tkinter event loop
 
-def game_loop():
+def game_loop(): # todo: add loop for game ends logic. work on menu screen.
     if game_window.run:
         game_window.refresh_window()
-        ball.move() # TODO: bugged. need to lose a life.
+        ball.move()
+        ball.collision_check()
+        update_lifeboard()
         game_window.root.after(16, game_loop)  # Call this function again after ~16 ms (~60 FPS)
 
 def update_lifeboard():
@@ -43,9 +45,6 @@ def initialize_bricks():
             x = col * (Bricks.width + Bricks.padding)
             y = Bricks.offset_y + row * (Bricks.height + Bricks.padding)
             game_window.canvas.create_rectangle(x, y, x + Bricks.width, y + Bricks.height, fill=brick_color, outline='', tags='brick')
-
-def on_mouse_move(event):
-    paddle.move_to(event.x)
 
 if __name__ == '__main__':
     main()

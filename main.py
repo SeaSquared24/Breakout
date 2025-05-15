@@ -175,7 +175,7 @@ def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks, spee
         elif "brick" in canvas.gettags(item):
             canvas.delete(item)
             num_bricks -= 1
-            if bounced == False:
+            if bounced == False: # only bounce once if hitting two at the same time.
                 bounced = True
                 y_velocity = -y_velocity  # bounce
             if num_bricks % 10 == 0: # num_bricks has already gone down so it shouldn't trigger on 100 bricks.
