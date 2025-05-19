@@ -61,7 +61,7 @@ def main():
     lives_left = 3
     life_board = init_life_board(lives_left)
 
-    game_over = check_game_state(num_bricks, lives_left)
+    game_over = num_bricks == 0 or lives_left == 0
 
     while run:
         refresh_window()
@@ -93,24 +93,12 @@ def main():
                 ball, x_velocity = reset_ball(ball)
                 time.sleep(0.1)
 
-            game_over = check_game_state(num_bricks, lives_left)
             time.sleep(DELAY)
 
         else:
             end_game(ball, num_bricks)
 
     window.destroy()
-
-def check_game_state(num_bricks, lives_left):
-    if not (bricks_left(num_bricks) and still_have_lives(lives_left)):
-        return True
-    return False
-
-def bricks_left(num_bricks):
-    return num_bricks > 0
-
-def still_have_lives(lives_left):
-    return lives_left > 0
 
 def init_life_board(lives_left):
     life_board = canvas.create_text(
