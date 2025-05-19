@@ -69,7 +69,10 @@ def main():
         # Animation Loop. Uses an if because the window still needs to refresh.
         if not game_over:
             update_paddle_position(paddle)
-            update_ball_position(ball, x_velocity, y_velocity, speed_multi)
+            update_ball_position(
+                ball,
+                x_velocity, y_velocity, speed_multi
+            )
 
             x_velocity, y_velocity = bounce(
                 ball, paddle,
@@ -126,43 +129,46 @@ def update_life_board(lives_left, life_board):
     return life_board, lives_left
 
 def bounce(ball, paddle, x_velocity, y_velocity):
-    ball_coords = canvas.coords(ball)
-    overlapping = canvas.find_overlapping(*ball_coords)
-    paddle_coords = canvas.coords(paddle)
+    ball_coords = canvas.coords(ball) # where is ball
+    overlapping_w_ball = canvas.find_overlapping(*ball_coords) # what is ball touching
+    # ball movement definitions
+    ball_moving_right = x_velocity > 0
+    ball_moving_left = x_velocity < 0
+    ball_moving_up = y_velocity < 0
+    ball_moving_down = y_velocity > 0
+    ball_touching_right = ball_coords[2] >= CANVAS_WIDTH
+    ball_touching_left = ball_coords[0] <= 0
+    ball_touching_top = ball_coords[1] <= UPPER_BOUND
+    # paddle related definitions
+    paddle_coords = canvas.coords(paddle) # where is paddle
+    paddle_hit = len(overlapping_w_ball) > 1 and paddle in overlapping_w_ball # is ball touching paddle
+    paddle_right_hit = ball_coords[0] > paddle_coords[2] - PADDLE_WIDTH/4 # bounce logic changes based on side of paddle
+    paddle_left_hit = ball_coords[2] < paddle_coords[0] + PADDLE_WIDTH/4
 
     if len(ball_coords) != 4:
         return x_velocity, y_velocity  # Skip bounce logic if coords are invalid
     else:
         # if ball touches right wall
-        if ball_coords[2] >= CANVAS_WIDTH and ball_moving_right(x_velocity):
+        if ball_touching_right and ball_moving_right:
             x_velocity = -x_velocity
 
         # if ball touches left wall
-        elif ball_coords[0] <= 0 and ball_moving_left(x_velocity):
+        elif ball_touching_left and ball_moving_left:
             x_velocity = -x_velocity
 
         # if ball touches top wall
-        elif ball_coords[1] <= UPPER_BOUND and ball_moving_up(y_velocity):
+        elif ball_touching_top and ball_moving_up:
             y_velocity = -y_velocity
 
         # if ball touches paddle
-        elif len(overlapping) > 1 and paddle in overlapping and y_velocity > 0:
+        elif paddle_hit and ball_moving_down: # always bounce up but can bounce backwards horizontally
             y_velocity = -y_velocity
-            if ball_coords[0] > paddle_coords[2] - PADDLE_WIDTH/4 and ball_moving_left(x_velocity): # ball touches right quarter of paddle
+            if paddle_right_hit and ball_moving_left: # ball touches right quarter of paddle
                 x_velocity = -x_velocity
-            if ball_coords[2] < paddle_coords[0] + PADDLE_WIDTH/4 and ball_moving_right(x_velocity): # ball touches left quarter of paddle
+            if paddle_left_hit and ball_moving_right: # ball touches left quarter of paddle
                 x_velocity = -x_velocity
 
         return x_velocity, y_velocity
-
-def ball_moving_right(x_velocity):
-    return x_velocity > 0
-
-def ball_moving_left(x_velocity):
-    return x_velocity < 0
-
-def ball_moving_up(y_velocity):
-    return y_velocity < 0
 
 def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks, speed_multi):
     ball_coords = canvas.coords(ball)
