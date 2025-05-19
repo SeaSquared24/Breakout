@@ -68,23 +68,23 @@ def main():
 
         # Animation Loop. Uses an if because the window still needs to refresh.
         if not game_over:
-            update_paddle_position(paddle)
+            update_paddle_position(paddle) # Positions
             update_ball_position(
                 ball,
                 x_velocity, y_velocity, speed_multi
             )
 
-            x_velocity, y_velocity = bounce(
+            x_velocity, y_velocity = bounce( # Bounce
                 ball, paddle,
                 x_velocity, y_velocity
             )
 
-            y_velocity, num_bricks, speed_multi = brick_collision_check(
+            y_velocity, num_bricks, speed_multi = brick_collision_check( # Brick check
                 ball, paddle, lifeboard,
                 y_velocity, num_bricks, speed_multi
             )
 
-            if ball_touches_bottom_wall(ball):
+            if ball_touches_bottom(ball):
                 # Lose a life and reset ball to center when it falls off bottom of canvas.
                 lifeboard, lives_left = update_lifeboard(lifeboard, lives_left)
                 ball, x_velocity = reset_ball(ball)
@@ -97,6 +97,13 @@ def main():
             end_game(ball, num_bricks)
 
     window.destroy()
+
+def ball_touches_bottom(ball):
+    coords = canvas.coords(ball)
+    if len(coords) != 4:
+        return False
+    y2 = coords[3]
+    return y2 >= CANVAS_HEIGHT
 
 def init_lifeboard(lives_left):
     lifeboard = canvas.create_text(
@@ -172,17 +179,18 @@ def brick_collision_check(ball, paddle, life_board, y_velocity, num_bricks, spee
     ball_coords = canvas.coords(ball)
     overlapping = canvas.find_overlapping(*ball_coords)
     bounced = False
+    every_ten_bricks = num_bricks % 10 == 0
 
     for item in overlapping:
         if item in (paddle, life_board):
             continue # if the overlapping item is the paddle or lifeboard, skip
-        elif "brick" in canvas.gettags(item):
+        elif 'brick' in canvas.gettags(item):
             canvas.delete(item)
             num_bricks -= 1
             if bounced == False: # only bounce once if hitting two at the same time.
                 bounced = True
                 y_velocity = -y_velocity  # bounce
-            if num_bricks % 10 == 0: # num_bricks has already gone down so it shouldn't trigger on 100 bricks.
+            if every_ten_bricks: # num_bricks has already gone down so it shouldn't trigger on 100 bricks.
                 speed_multi = update_spdmulti(speed_multi)
 
     return y_velocity, num_bricks, speed_multi
@@ -217,14 +225,12 @@ def update_paddle_position(paddle):
     """
     subtract the root window from the pointer position on screen, otherwise window size will be from the top left
     corner of the screen, even though window might be elsewhere on screen.
-    """
-    abs_coord_x = window.winfo_pointerx() - window.winfo_rootx()
 
-    """
     locked_x is the max of either the left side of the canvas, or the minimum of either the right edge of the canvas
     or the center of the paddle wherever the mouse is. This locks the paddle inside the canvas so it doesn't follow
     the mouse off screen.
     """
+    abs_coord_x = window.winfo_pointerx() - window.winfo_rootx()
     locked_x = max(0, min(CANVAS_WIDTH - PADDLE_WIDTH, abs_coord_x - PADDLE_WIDTH/2))
     canvas.moveto(paddle, locked_x, PADDLE_Y)
 
@@ -238,13 +244,6 @@ def init_paddle():
         tags="paddle"
     )
     return paddle
-
-def ball_touches_bottom_wall(ball):
-    coords = canvas.coords(ball)
-    if len(coords) != 4:
-        return False
-    y2 = coords[3]
-    return y2 >= CANVAS_HEIGHT
 
 def lay_brick_row(brick_top_y, color):
     """
