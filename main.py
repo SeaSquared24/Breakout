@@ -59,9 +59,9 @@ def main():
     ball, x_velocity = init_ball()
 
     lives_left = 3
-    life_board = init_life_board(lives_left)
+    lifeboard = init_lifeboard(lives_left)
 
-    game_over = num_bricks == 0 or lives_left == 0
+    game_over = False
 
     while run:
         refresh_window()
@@ -80,19 +80,17 @@ def main():
             )
 
             y_velocity, num_bricks, speed_multi = brick_collision_check(
-                ball, paddle, life_board,
+                ball, paddle, lifeboard,
                 y_velocity, num_bricks, speed_multi
             )
 
             if ball_touches_bottom_wall(ball):
                 # Lose a life and reset ball to center when it falls off bottom of canvas.
-                life_board, lives_left = update_life_board(
-                    lives_left, life_board
-                )
-
+                lifeboard, lives_left = update_lifeboard(lifeboard, lives_left)
                 ball, x_velocity = reset_ball(ball)
-                time.sleep(0.1)
+                time.sleep(0.1) # visual queue
 
+            game_over = num_bricks == 0 or lives_left == 0 # won't update without this line in the loop.
             time.sleep(DELAY)
 
         else:
@@ -100,21 +98,33 @@ def main():
 
     window.destroy()
 
-def init_life_board(lives_left):
-    life_board = canvas.create_text(
+def init_lifeboard(lives_left):
+    lifeboard = canvas.create_text(
         CANVAS_WIDTH - 50,
         20,
         text = f"Lives: {lives_left}",
         font = ('Arial', 20),
-        fill = 'black'
+        fill = 'black',
+        tags='lifeboard'
     )
-    return life_board
+    return lifeboard
 
-def update_life_board(lives_left, life_board):
-    lives_left -= 1
-    canvas.delete(life_board)
-    life_board = init_life_board(lives_left)
-    return life_board, lives_left
+def update_lifeboard(lifeboard, lives_left):
+    lifeboard_exists = canvas.find_withtag('lifeboard')
+    if lifeboard_exists:
+        lives_left -= 1
+        canvas.delete(lifeboard)
+        lifeboard = canvas.create_text(
+            CANVAS_WIDTH - 50,
+            20,
+            text=f"Lives: {lives_left}",
+            font=('Arial', 20),
+            fill='black',
+            tags='lifeboard'
+        )
+        return lifeboard, lives_left
+
+    return
 
 def bounce(ball, paddle, x_velocity, y_velocity):
     ball_coords = canvas.coords(ball) # where is ball
