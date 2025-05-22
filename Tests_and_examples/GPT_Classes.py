@@ -189,9 +189,11 @@ class Paddle:
         self.canvas.bind_all("<Right>", self.move_right)
 
     def move_left(self, event):
-        if self.canvas.coords(self.id)[0] > 0 and self.game_state.play:
-            self.canvas.move(self.id, -self.speed, 0)
+        if self.canvas.coords(self.id) != []:
+            if self.canvas.coords(self.id)[0] > 0:
+                self.canvas.move(self.id, -self.speed, 0)
 
     def move_right(self, event):
-        if self.canvas.coords(self.id)[2] < self.canvas.winfo_width() and self.game_state.play:
-            self.canvas.move(self.id, self.speed, 0)
+        if self.canvas.coords(self.id) != []:
+            if self.canvas.coords(self.id)[2] < self.canvas.winfo_width():
+                self.canvas.move(self.id, self.speed, 0)
