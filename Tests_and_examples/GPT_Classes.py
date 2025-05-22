@@ -125,6 +125,7 @@ class Ball:
         )
 
     def update_speed(self):
+        # abs(self.dx) maintains direction, if/else provides safety from dividing by zero.
         self.dx = Ball.speed * (1 if self.dx == 0 else (self.dx / abs(self.dx))) * self.game_state.speed_multi
         self.dy = Ball.speed * (1 if self.dy == 0 else (self.dy / abs(self.dy))) * self.game_state.speed_multi
 
@@ -135,14 +136,21 @@ class Ball:
         self.coords = self.canvas.coords(self.id)
         self.overlapping = self.canvas.find_overlapping(*self.coords)
         self.bounced = False
+        self.moving_right = self.dx > 0
+        self.moving_left = self.dx < 0
+        paddle = self.canvas.find_withtag('paddle') # store the paddle so I can call coords on it next.
+        p_coords = self.canvas.coords(paddle)
 
         for item in self.overlapping:
             self.item_tags = self.canvas.gettags(item)
 
-            if "paddle" in self.item_tags and self.dy > 0:
+            if 'paddle' in self.item_tags and self.dy > 0: # bounce up
                 self.dy *= -1
-                # TODO: paddle physics
-            elif "brick" in self.item_tags:
+                if self.coords[0] >= p_coords[2] - 20 and self.moving_left: # bounce back if hitting right quarter
+                    self.dx *= -1
+                elif self.coords[2] <= p_coords[0] + 20 and self.moving_right: # bounce back if hitting the left quarter
+                    self.dx *= -1
+            elif 'brick' in self.item_tags:
                 self.canvas.delete(item)
                 if self.game_state:
                     self.game_state.num_bricks -= 1
