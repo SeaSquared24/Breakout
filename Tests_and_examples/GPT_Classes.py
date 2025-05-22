@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import Canvas
-import time
 
 class Window:
     canvas_width = 500
@@ -29,7 +28,6 @@ class GameState:
         self.lives_left = 3
         self.num_bricks = 100
         self.speed_multi = 1.0
-        self.delay = 0.01
 
     def display_menu(self):
         self.canvas.delete('all')
@@ -84,14 +82,15 @@ class Bricks:
                 )
 
 class Ball:
+    speed = 5
     def __init__(self, canvas, game_state=None):
         self.canvas = canvas
         self.game_state = game_state
         self.radius = 10
         self.x = 250
         self.y = 250
-        self.dx = 3 * self.game_state.speed_multi
-        self.dy = 3 * self.game_state.speed_multi
+        self.dx = Ball.speed * self.game_state.speed_multi
+        self.dy = Ball.speed * self.game_state.speed_multi
         self.id = self.canvas.create_oval(
             self.x - self.radius, self.y - self.radius,
             self.x + self.radius, self.y + self.radius,
@@ -117,8 +116,8 @@ class Ball:
     def reset(self):
         self.x = self.canvas.winfo_width() // 2
         self.y = self.canvas.winfo_height() // 2
-        self.dx = 3 * self.game_state.speed_multi
-        self.dy = 3 * self.game_state.speed_multi
+        self.dx = Ball.speed * self.game_state.speed_multi
+        self.dy = Ball.speed * self.game_state.speed_multi
         self.canvas.coords(
             self.id,
             self.x - self.radius, self.y - self.radius,
@@ -126,13 +125,13 @@ class Ball:
         )
 
     def update_speed(self):
-        self.dx = 3 * (1 if self.dx == 0 else (self.dx / abs(self.dx))) * self.game_state.speed_multi
-        self.dy = 3 * (1 if self.dy == 0 else (self.dy / abs(self.dy))) * self.game_state.speed_multi
+        self.dx = Ball.speed * (1 if self.dx == 0 else (self.dx / abs(self.dx))) * self.game_state.speed_multi
+        self.dy = Ball.speed * (1 if self.dy == 0 else (self.dy / abs(self.dy))) * self.game_state.speed_multi
 
     def collision_check(self):
         if not self.canvas.coords(self.id):
             return
-
+        # coords and overlapping will be checked every time this function runs. bounced will always start as False.
         self.coords = self.canvas.coords(self.id)
         self.overlapping = self.canvas.find_overlapping(*self.coords)
         self.bounced = False

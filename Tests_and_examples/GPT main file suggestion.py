@@ -2,6 +2,16 @@
 
 from GPT_Classes import *
 
+"""
+Basically what I've learned here is that the Game class needs to initialize in order to have a state to pass into other
+class methods, in this case, when initializing the ball so that ball.<methods> can update the game state and have access
+to the current correct information.
+
+There's also a difference in the way I have to update things such as the speed of the ball. In my original layout, I used 
+a variable in main() that my update_ball_position() then referred to when using canvas.move. When I do this in a class
+oriented way, however, I need to update this information in both the GameState class, and then in the instance of ball
+to reflect the change. Otherwise, the ball doesn't check again on its own.
+"""
 class Game:
     def __init__(self):
         self.window = Window()

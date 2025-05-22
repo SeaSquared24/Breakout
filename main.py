@@ -203,7 +203,7 @@ def update_ball_position(ball, x_velocity, y_velocity, speed_multi):
     coords = canvas.coords(ball)
     if not coords:
         return  # Ball has been deleted or not initialized
-    canvas.move(ball, x_velocity, y_velocity * speed_multi)
+    canvas.move(ball, x_velocity * speed_multi, y_velocity * speed_multi)
 
 def reset_ball(ball):
     canvas.delete(ball)
