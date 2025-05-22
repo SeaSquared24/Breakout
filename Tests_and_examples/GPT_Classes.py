@@ -22,24 +22,17 @@ class Window:
         self.run = False
         self.root.destroy()
 
-    def refresh_window(self):
-        self.root.update_idletasks()
-        self.root.update()
-        time.sleep(GameState.delay)
-
-class GameState():
-    delay = 0.01
-    lives_left = 3
-    num_bricks = 100
-    speed_multi = 1.0
-    play = True # start False, call play_game to start game, game ends when play again equals False.
-
+class GameState:
     def __init__(self, canvas):
         self.canvas = canvas
-        self.canvas.bind_all("<Return>", self.play_game)  # bind Enter key
+        self.play = False
+        self.lives_left = 3
+        self.num_bricks = 100
+        self.speed_multi = 1.0
+        self.delay = 0.01
 
     def display_menu(self):
-        self.canvas.delete('ball')
+        self.canvas.delete('all')
         self.canvas.create_text(
             Window.canvas_width / 2,
             Window.canvas_height / 2,
@@ -49,24 +42,20 @@ class GameState():
             tags='menu'
         )
 
-    def play_game(self, event):
-        GameState.play = True
-        # todo: get back to game after updating variables
-
     def update_lifeboard(self):
         self.canvas.delete('lifeboard')
-        self.canvas.create_text(  # Create lifeboard
+        self.canvas.create_text(
             Window.canvas_width - 60,
             20,
             font=('Arial', 20),
-            text=f'Lives: {GameState.lives_left}',
+            text=f'Lives: {self.lives_left}',
             tags='lifeboard'
         )
 
     def update_spdmulti(self):
         self.speed_multi += 0.2
 
-class Bricks():
+class Bricks:
     def __init__(self, canvas):
         self.canvas = canvas
         self.rows, self.cols = 10, 10
@@ -85,22 +74,25 @@ class Bricks():
                 brick_color = 'lime'
             elif row >= 8:
                 brick_color = 'cyan'
+
             for col in range(self.cols):
                 x = col * (self.width + self.padding)
                 y = Window.offset_y + row * (self.height + self.padding)
-                self.canvas.create_rectangle(x, y, x + self.width, y + self.height, fill=brick_color,
-                                                    outline='', tags='brick')
+                self.canvas.create_rectangle(
+                    x, y, x + self.width, y + self.height,
+                    fill=brick_color, outline='', tags='brick'
+                )
 
 class Ball:
-    # todo: randomize ball direction.
-    def __init__(self, canvas):
+    def __init__(self, canvas, game_state=None):
         self.canvas = canvas
+        self.game_state = game_state
         self.radius = 10
         self.x = 250
         self.y = 250
-        self.dx = 3
-        self.dy = 3
-        self.id = canvas.create_oval(
+        self.dx = 3 * self.game_state.speed_multi
+        self.dy = 3 * self.game_state.speed_multi
+        self.id = self.canvas.create_oval(
             self.x - self.radius, self.y - self.radius,
             self.x + self.radius, self.y + self.radius,
             fill='blue', tags='ball'
@@ -111,66 +103,63 @@ class Ball:
         self.y += self.dy
         self.canvas.move(self.id, self.dx, self.dy)
 
-        # Bounce off walls
-        if self.x - self.radius <= 0 or self.x + self.radius >= self.canvas.winfo_width(): # sides
+        if self.x - self.radius <= 0 or self.x + self.radius >= self.canvas.winfo_width():
             self.dx *= -1
-        elif self.y - self.radius <= Window.offset_y: # top wall
+        elif self.y - self.radius <= Window.offset_y:
             self.dy *= -1
-        elif self.y + self.radius >= self.canvas.winfo_height(): # bottom wall, lose a life and reset position
-            GameState.lives_left -= 1
+        elif self.y + self.radius >= self.canvas.winfo_height():
+            if self.game_state:
+                self.game_state.lives_left -= 1
+                if self.game_state.lives_left <= 0:
+                    self.game_state.play = False
             self.reset()
 
     def reset(self):
-        # Set to initial position (you can adjust these values as needed)
         self.x = self.canvas.winfo_width() // 2
         self.y = self.canvas.winfo_height() // 2
-        self.dx = 3
-        self.dy = 3
-
-        # Move ball to new position
+        self.dx = 3 * self.game_state.speed_multi
+        self.dy = 3 * self.game_state.speed_multi
         self.canvas.coords(
             self.id,
-            self.x - self.radius,
-            self.y - self.radius,
-            self.x + self.radius,
-            self.y + self.radius
+            self.x - self.radius, self.y - self.radius,
+            self.x + self.radius, self.y + self.radius
         )
 
-    def collision_check(self):
-        ball_moving_right = self.dx > 0
-        ball_moving_left = self.dx < 0
-        ball_coords = self.canvas.coords(self.id)
-        if not ball_coords: # check that ball exists
-            return
-        overlapping = self.canvas.find_overlapping(*ball_coords)
-        bounced = False
+    def update_speed(self):
+        self.dx = 3 * (1 if self.dx == 0 else (self.dx / abs(self.dx))) * self.game_state.speed_multi
+        self.dy = 3 * (1 if self.dy == 0 else (self.dy / abs(self.dy))) * self.game_state.speed_multi
 
-        for item in overlapping:
-            item_coords = self.canvas.coords(item)
-            if "paddle" in self.canvas.gettags(item) and self.dy > 0: # if ball touches paddle
+    def collision_check(self):
+        if not self.canvas.coords(self.id):
+            return
+
+        self.coords = self.canvas.coords(self.id)
+        self.overlapping = self.canvas.find_overlapping(*self.coords)
+        self.bounced = False
+
+        for item in self.overlapping:
+            self.item_tags = self.canvas.gettags(item)
+
+            if "paddle" in self.item_tags and self.dy > 0:
                 self.dy *= -1
-                # todo: add paddle physics
-                """paddle_right_hit = ball_coords[0] > item_coords[2] - 20  # bounce logic changes based on side of paddle
-                paddle_left_hit = ball_coords[2] < item_coords[0] + 20
-                if paddle_right_hit and ball_moving_left:  # ball touches right quarter of paddle
-                    self.dx *= -1
-                if paddle_left_hit and ball_moving_right:  # ball touches left quarter of paddle
-                    self.dx *= -1"""
-            elif "brick" in self.canvas.gettags(item):
+                # TODO: paddle physics
+            elif "brick" in self.item_tags:
                 self.canvas.delete(item)
-                GameState.num_bricks -= 1
-                if bounced == False:  # only bounce once if hitting two at the same time.
-                    bounced = True
-                    self.dy *= -1 # bounce
-                if GameState.num_bricks % 10 == 0:  # num_bricks has already gone down so it shouldn't trigger on 100 bricks.
-                    GameState.update_spdmulti()
+                if self.game_state:
+                    self.game_state.num_bricks -= 1
+                    if not self.bounced:
+                        self.dy *= -1
+                        self.bounced = True
+                    if self.game_state.num_bricks % 10 == 0:
+                        self.game_state.update_spdmulti()
+                        self.update_speed()
 
 class Paddle:
     def __init__(self, canvas):
         self.canvas = canvas
         self.width = 80
         self.height = 10
-        self.speed = 10  # Pixels per key press
+        self.speed = 15
         self.x = (canvas.winfo_width() / 2) - (self.width / 2)
         self.y = canvas.winfo_height() - 30
         self.id = canvas.create_rectangle(
@@ -178,8 +167,6 @@ class Paddle:
             self.x + self.width, self.y + self.height,
             fill='black', tags='paddle'
         )
-
-        # Bind key events
         self.canvas.bind_all("<Left>", self.move_left)
         self.canvas.bind_all("<Right>", self.move_right)
 

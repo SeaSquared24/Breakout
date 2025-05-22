@@ -1,78 +1,47 @@
-from Classes import *
+# game.py (Refactored)
 
-game_window = Window()
-ball = Ball(game_window.canvas)
-paddle = Paddle(game_window.canvas)
+from GPT_Classes import *
 
+class Game:
+    def __init__(self):
+        self.window = Window()
+        self.canvas = self.window.canvas
+        self.state = GameState(self.canvas)
+        self.ball = Ball(self.canvas, game_state=self.state)
+        self.paddle = Paddle(self.canvas)
+        self.bricks = Bricks(self.canvas)
+
+        self.state.display_menu()
+        self.canvas.bind_all("<Return>", self.start_game)
+
+    def start_game(self, event=None):
+        GameState.play = True
+        GameState.lives_left = 3
+        GameState.num_bricks = 100
+        self.canvas.delete("all")  # Clear old elements
+
+        self.ball = Ball(self.canvas, game_state=self.state)
+        self.paddle = Paddle(self.canvas)
+        self.bricks = Bricks(self.canvas)
+        self.loop()
+
+    def loop(self):
+        if self.window.run:
+            if GameState.play:
+                self.ball.move()
+                self.ball.collision_check()
+                self.state.update_lifeboard()
+                if self.state.lives_left <= 0 or self.state.num_bricks <= 0:
+                    GameState.play = False
+                    self.state.lives_left = 3
+                    self.state.num_bricks = 100
+                    self.state.display_menu()
+                else:
+                    self.window.root.after(16, self.loop)
 
 def main():
-    initialize_bricks()
-    update_lifeboard()
-    game_window.root.bind('<Motion>', on_mouse_move)
-    game_loop()
-    game_window.root.mainloop()
-
-
-def game_loop():
-    if game_window.run:
-        game_window.refresh_window()
-        ball.move()
-        check_collisions()
-        update_lifeboard()
-        game_window.root.after(16, game_loop)
-
-
-def on_mouse_move(event):
-    paddle.move_to(event.x)
-
-
-def update_lifeboard():
-    game_window.canvas.delete('lifeboard')
-    game_window.canvas.create_text(
-        game_window.canvas_width - 60,
-        20,
-        font=('Arial', 20),
-        text=f'Lives: {GameState.lives_left}',
-        fill='white',
-        tags='lifeboard'
-    )
-
-
-def initialize_bricks():
-    rows = 5
-    cols = 10
-    width = 40
-    height = 20
-    padding = 5
-    offset_y = 50
-
-    colors = ['red', 'orange', 'yellow', 'green', 'cyan']
-
-    for row in range(rows):
-        for col in range(cols):
-            x = col * (width + padding)
-            y = offset_y + row * (height + padding)
-            game_window.canvas.create_rectangle(
-                x, y, x + width, y + height,
-                fill=colors[row % len(colors)],
-                tags='brick'
-            )
-
-
-def check_collisions():
-    # Get ball's current position
-    ball_coords = game_window.canvas.coords(ball.id)
-    overlaps = game_window.canvas.find_overlapping(*ball_coords)
-
-    for item in overlaps:
-        tags = game_window.canvas.gettags(item)
-        if 'brick' in tags:
-            game_window.canvas.delete(item)
-            ball.dy *= -1  # Reverse Y direction
-            break
-        elif 'paddle' in tags:
-            ball.dy = -abs(ball.dy)  # Bounce up
-
+    game = Game()
+    game.window.root.mainloop()
 
 if __name__ == '__main__':
     main()
