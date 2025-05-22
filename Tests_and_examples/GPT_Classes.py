@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import Canvas
 import random
+import math
 
 class Window:
     canvas_width = 500
@@ -118,15 +119,20 @@ class Ball:
             self.reset()
 
     def reset(self):
-        # TODO: randomize x value excluding zero
-        num_lst = []
-        for i in range(-3, 4):
-            if i != 0:
-                num_lst.append(i)
+        # Compute current speed magnitude (hypotenuse)
+        current_speed = math.sqrt(self.dx ** 2 + self.dy ** 2)
+
+        # Randomize a new angle between 30 and 150 degrees, avoiding flat angles
+        angle = random.uniform(math.radians(30), math.radians(150))
+
+        # Apply the same speed in the new direction
+        self.dx = current_speed * math.cos(angle)
+        self.dy = abs(current_speed * math.sin(angle))  # Ensure ball initially goes downward
+
+        # Reset position to center
         self.x = self.canvas.winfo_width() // 2
         self.y = self.canvas.winfo_height() // 2
-        self.dx = random.choice(num_lst) * self.game_state.speed_multi
-        self.dy = Ball.speed * self.game_state.speed_multi
+
         self.canvas.coords(
             self.id,
             self.x - self.radius, self.y - self.radius,
@@ -134,8 +140,10 @@ class Ball:
         )
 
     def update_speed(self):
-        self.dx = self.dx * self.game_state.speed_multi
-        self.dy = self.dy * self.game_state.speed_multi
+        direction_x = 1 if self.dx > 0 else -1
+        direction_y = 1 if self.dy > 0 else -1
+        self.dx = direction_x * Ball.speed * self.game_state.speed_multi
+        self.dy = direction_y * Ball.speed * self.game_state.speed_multi
 
     def collision_check(self):
         if not self.canvas.coords(self.id):
