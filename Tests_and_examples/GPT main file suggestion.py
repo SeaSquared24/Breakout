@@ -18,7 +18,7 @@ class Game:
         self.canvas = self.window.canvas
         self.state = GameState(self.canvas)
         self.ball = Ball(self.canvas, game_state=self.state)
-        self.paddle = Paddle(self.canvas)
+        self.paddle = Paddle(self.canvas, game_state=self.state)
         self.bricks = Bricks(self.canvas)
 
         self.state.display_menu()

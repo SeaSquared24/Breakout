@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import Canvas
+import random
 
 class Window:
     canvas_width = 500
@@ -100,11 +101,14 @@ class Ball:
     def move(self):
         self.x += self.dx
         self.y += self.dy
+        self.bounced = False
         self.canvas.move(self.id, self.dx, self.dy)
 
-        if self.x - self.radius <= 0 or self.x + self.radius >= self.canvas.winfo_width():
+        if (self.x - self.radius <= 0 or self.x + self.radius >= self.canvas.winfo_width()) and self.bounced == False:
+            self.bounced = True
             self.dx *= -1
-        elif self.y - self.radius <= Window.offset_y:
+        elif self.y - self.radius <= Window.offset_y and self.bounced == False:
+            self.bounced = True
             self.dy *= -1
         elif self.y + self.radius >= self.canvas.winfo_height():
             if self.game_state:
@@ -114,9 +118,14 @@ class Ball:
             self.reset()
 
     def reset(self):
+        # TODO: randomize x value excluding zero
+        num_lst = []
+        for i in range(-3, 4):
+            if i != 0:
+                num_lst.append(i)
         self.x = self.canvas.winfo_width() // 2
         self.y = self.canvas.winfo_height() // 2
-        self.dx = Ball.speed * self.game_state.speed_multi
+        self.dx = random.choice(num_lst) * self.game_state.speed_multi
         self.dy = Ball.speed * self.game_state.speed_multi
         self.canvas.coords(
             self.id,
@@ -125,9 +134,8 @@ class Ball:
         )
 
     def update_speed(self):
-        # abs(self.dx) maintains direction, if/else provides safety from dividing by zero.
-        self.dx = Ball.speed * (1 if self.dx == 0 else (self.dx / abs(self.dx))) * self.game_state.speed_multi
-        self.dy = Ball.speed * (1 if self.dy == 0 else (self.dy / abs(self.dy))) * self.game_state.speed_multi
+        self.dx = self.dx * self.game_state.speed_multi
+        self.dy = self.dy * self.game_state.speed_multi
 
     def collision_check(self):
         if not self.canvas.coords(self.id):
@@ -146,10 +154,12 @@ class Ball:
 
             if 'paddle' in self.item_tags and self.dy > 0: # bounce up
                 self.dy *= -1
-                if self.coords[0] >= p_coords[2] - 20 and self.moving_left: # bounce back if hitting right quarter
+                if self.coords[0] >= p_coords[2] - 20 and self.moving_left and self.bounced == False: # bounce back if hitting right quarter
                     self.dx *= -1
-                elif self.coords[2] <= p_coords[0] + 20 and self.moving_right: # bounce back if hitting the left quarter
+                    self.bounced = True
+                elif self.coords[2] <= p_coords[0] + 20 and self.moving_right and self.bounced == False: # bounce back if hitting the left quarter
                     self.dx *= -1
+                    self.bounced = True
             elif 'brick' in self.item_tags:
                 self.canvas.delete(item)
                 if self.game_state:
@@ -162,8 +172,9 @@ class Ball:
                         self.update_speed()
 
 class Paddle:
-    def __init__(self, canvas):
+    def __init__(self, canvas, game_state=None):
         self.canvas = canvas
+        self.game_state = game_state
         self.width = 80
         self.height = 10
         self.speed = 15
@@ -178,9 +189,9 @@ class Paddle:
         self.canvas.bind_all("<Right>", self.move_right)
 
     def move_left(self, event):
-        if self.canvas.coords(self.id)[0] > 0:
+        if self.canvas.coords(self.id)[0] > 0 and self.game_state.play:
             self.canvas.move(self.id, -self.speed, 0)
 
     def move_right(self, event):
-        if self.canvas.coords(self.id)[2] < self.canvas.winfo_width():
+        if self.canvas.coords(self.id)[2] < self.canvas.winfo_width() and self.game_state.play:
             self.canvas.move(self.id, self.speed, 0)
