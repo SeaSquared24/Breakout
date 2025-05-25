@@ -24,7 +24,7 @@ class Window:
 
 class GameState:
     def __init__(self, canvas):
-        self.debug = True
+        self.debug = False
         self.canvas = canvas
         self.play = False
         self.lives_left = 3
@@ -47,10 +47,21 @@ class GameState:
             Window.canvas_width / 2,
             Window.canvas_height / 2,
             anchor='center',
+            justify='center',
             font=('Arial', 30),
-            text="Press Enter to Play",
+            text=self.determine_menu(),
             tags='menu'
         )
+
+    def determine_menu(self):
+        dead = self.lives_left == 0
+        winner = self.num_bricks == 0
+        if dead:
+            return "Oh no! You lost.\nPress Enter to Play Again."
+        elif winner:
+            return "Congrats!\nPress Enter to Play Again."
+        else:
+            return "Press Enter to Play."
 
     def update_lifeboard(self):
         if not self.canvas.find_withtag('lifeboard'):
@@ -106,15 +117,15 @@ class Bricks:
 
         for row in range(self.rows):
             if row <= 1:
-                brick_color = 'red'
+                brick_color = 'indigo'
             elif 2 <= row <= 3:
-                brick_color = 'orange'
+                brick_color = 'blue'
             elif 4 <= row <= 5:
-                brick_color = 'yellow'
+                brick_color = 'teal'
             elif 6 <= row <= 7:
-                brick_color = 'lime'
-            elif row >= 8:
                 brick_color = 'cyan'
+            elif row >= 8:
+                brick_color = 'lightblue'
 
             for col in range(self.cols):
                 x = col * (self.width + self.padding)
@@ -152,10 +163,9 @@ class Ball:
         self.movey = self.dy * self.game_state.speed_multi
 
     def move(self):
-        self.update_movement()
+        self.update_movement() # Ensure correct velocity is passed to self.canvas.move
         self.canvas.move(self.id, self.movex, self.movey)
-        if self.game_state.debug:
-            print(f"[BALL.MOVE] velocity is ({self.movex}, {self.movey})")
+        self.velocity_debug()
         coords = self.canvas.coords(self.id)
 
         if coords[0] <= 0 or coords[2] >= self.canvas.winfo_width(): # sides
@@ -169,10 +179,14 @@ class Ball:
                     self.game_state.play = False
             self.reset()
 
+    def velocity_debug(self):
+        if self.game_state.debug:
+            print(f"[BALL.MOVE] velocity is ({self.movex}, {self.movey})")
+
     def random_dx(self):
         choice = random.choice([i for i in range(-3, 4) if i != 0])
         if self.game_state.debug:
-            print("[RANDOM DX] random x is", choice)
+            print("[RANDOM DX]:", choice)
         return choice
 
     def reset(self):
@@ -186,12 +200,9 @@ class Ball:
         )
 
     def collision_check(self):
-        # BUGGED: ball speeds up after breaking 7 bricks and slows back down after reaching 10.
-        # Speeds up again after a few hits then speeds up on each hit until becoming way too fast.
         coords = self.canvas.coords(self.id)
         overlapping = self.canvas.find_overlapping(*coords)
         bounced = False
-        printed = False # for debug mode, only print debug once per collision instead of every frame.
 
         paddle = self.canvas.find_withtag('paddle')
         p_coords = self.canvas.coords(paddle)
@@ -214,14 +225,13 @@ class Ball:
                     bounced = True
                     self.game_state.handle_brick_break()
 
-                if self.game_state.debug and printed == False:
+                if self.game_state.debug:
                     self.game_state.display_debug()
                     print("")
                     print(f"[COLLISION CHECK] Overlapping {overlapping} ")
                     print(f"[COLLISION CHECK] Direction ({self.dx, self.dy})")
                     print(f"[COLLISION CHECK] velocity is ({self.movex}, {self.movey})")
                     print("")
-                    printed = True
 
 class Paddle:
     def __init__(self, canvas, game_state=None):
@@ -229,25 +239,40 @@ class Paddle:
         self.game_state = game_state
         self.width = 80
         self.height = 10
-        self.speed = 15
+        self.speed = 3
+        self.dx = 0
+
         self.x = (canvas.winfo_width() / 2) - (self.width / 2)
         self.y = canvas.winfo_height() - 30
+
         self.id = canvas.create_rectangle(
             self.x, self.y,
             self.x + self.width, self.y + self.height,
             fill='black', tags='paddle'
         )
+
+        # Bind key events
         self.canvas.bind_all("<Left>", self.move_left)
         self.canvas.bind_all("<Right>", self.move_right)
+        self.canvas.bind_all("<KeyRelease-Left>", self.stop)
+        self.canvas.bind_all("<KeyRelease-Right>", self.stop)
 
-    # TODO: change the paddle motion to be mouse driven with possibly a way to port my way into controller support.
+    def draw(self):
+        # Get current paddle coordinates
+        x1, y1, x2, y2 = self.canvas.coords(self.id)
+
+        # Check if move is within canvas bounds
+        if (x1 + self.dx >= 0) and (x2 + self.dx <= self.canvas.winfo_width()):
+            self.canvas.move(self.id, self.dx, 0)
+        else:
+            self.dx = 0  # Prevent further movement in that direction
 
     def move_left(self, event):
-        if self.canvas.coords(self.id) != []:
-            if self.canvas.coords(self.id)[0] > 0:
-                self.canvas.move(self.id, -self.speed, 0)
+        self.dx = -self.speed
 
     def move_right(self, event):
-        if self.canvas.coords(self.id) != []:
-            if self.canvas.coords(self.id)[2] < self.canvas.winfo_width():
-                self.canvas.move(self.id, self.speed, 0)
+        self.dx = self.speed
+
+    def stop(self, event):
+        self.dx = 0
+

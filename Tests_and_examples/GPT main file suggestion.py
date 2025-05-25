@@ -63,13 +63,14 @@ class Game:
         self.ball.collision_check()
         self.state.update_lifeboard()
         self.state.init_countdown()
+        self.paddle.draw()
         self.ball.move()
 
         if self.state.lives_left <= 0 or self.state.num_bricks <= 0:
             self.state.play = False
+            self.state.display_menu()
             self.state.lives_left = 3
             self.state.num_bricks = 100
-            self.state.display_menu()
         else:
             if self._loop_id:
                 self.window.root.after_cancel(self._loop_id)  # Cancel any existing callback
