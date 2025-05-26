@@ -37,7 +37,7 @@ class Game:
             self.canvas.delete("all")  # Clear old elements
 
             self.ball = Ball(self.canvas, game_state=self.state)
-            self.paddle = Paddle(self.canvas)
+            self.paddle = Paddle(self.canvas, game_state=self.state)
             self.bricks = Bricks(self.canvas)
 
             self.loop_running = False
@@ -53,7 +53,7 @@ class Game:
             self.ball.collision_check()
             self.state.update_lifeboard()
             self.state.init_countdown()
-            self.paddle.draw()
+            self.paddle.move()
             self.ball.move()
 
             if self.state.lives_left <= 0 or self.state.num_bricks <= 0:

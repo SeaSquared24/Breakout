@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import Canvas
 import random
+import time
 
 class Window:
     canvas_width = 500
@@ -31,6 +32,8 @@ class GameState:
         self.num_bricks = 100
         self.cntdwn = self.num_bricks % 10
         self.speed_multi = 1.0
+        self.lifeboard_id = self.update_lifeboard()
+        self.countdown_id = self.init_countdown()
 
     def display_debug(self):
         if self.debug:
@@ -72,8 +75,9 @@ class GameState:
                 text=f'Lives: {self.lives_left}',
                 tags='lifeboard'
             )
+            return self.lifeboard_id
         else:
-            self.canvas.itemconfig(self.lifeboard_id, text=f'Lives: {self.lives_left}')
+            return self.canvas.itemconfig(self.lifeboard_id, text=f'Lives: {self.lives_left}')
 
     def init_countdown(self):
         if 0 < self.cntdwn < 4:
@@ -86,11 +90,13 @@ class GameState:
                     text=f'Speedup in {self.cntdwn} bricks!',
                     tags='countdown'
                 )
+                return self.countdown_id
             else:
-                self.canvas.itemconfig(self.countdown_id, text=f'Speedup in {self.cntdwn} bricks!')
+                return self.canvas.itemconfig(self.countdown_id, text=f'Speedup in {self.cntdwn} bricks!')
+
         else:
             if self.canvas.find_withtag('countdown'):
-                self.canvas.delete('countdown')
+                return self.canvas.delete('countdown')
 
     def handle_brick_break(self):
         self.num_bricks -= 1
@@ -110,12 +116,11 @@ class GameState:
 class Bricks:
     def __init__(self, canvas):
         self.canvas = canvas
-        self.rows, self.cols = 10, 10
         self.padding = 5
         self.width = (Window.canvas_width - self.padding * 9) / 10
         self.height = 10
 
-        for row in range(self.rows):
+        for row in range(10):
             if row <= 1:
                 brick_color = 'indigo'
             elif 2 <= row <= 3:
@@ -127,7 +132,7 @@ class Bricks:
             elif row >= 8:
                 brick_color = 'lightblue'
 
-            for col in range(self.cols):
+            for col in range(10):
                 x = col * (self.width + self.padding)
                 y = Window.offset_y + row * (self.height + self.padding)
                 self.canvas.create_rectangle(
@@ -198,6 +203,8 @@ class Ball:
             self.x - self.radius, self.y - self.radius,
             self.x + self.radius, self.y + self.radius
         )
+        self.update_movement()
+        time.sleep(0.5) # visual queue
 
     def collision_check(self):
         coords = self.canvas.coords(self.id)
@@ -213,17 +220,17 @@ class Ball:
             if 'paddle' in tags and self.dy > 0:
                 self.dy = -self.dy
                 # Side paddle bounce logic
-                if coords[0] > p_coords[2] - 20 and self.dx < 0:
+                if coords[0] > p_coords[2] - 25 and self.dx < 0:
                     self.dx = -self.dx
-                elif coords[2] < p_coords[0] + 20 and self.dx > 0:
+                elif coords[2] < p_coords[0] + 25 and self.dx > 0:
                     self.dx = -self.dx
 
             elif 'brick' in tags:
                 self.canvas.delete(item)
+                self.game_state.handle_brick_break()
                 if not bounced:
                     self.dy = -self.dy
                     bounced = True
-                    self.game_state.handle_brick_break()
 
                 if self.game_state.debug:
                     self.game_state.display_debug()
@@ -239,7 +246,7 @@ class Paddle:
         self.game_state = game_state
         self.width = 80
         self.height = 10
-        self.speed = 3
+        self.speed = 3 * self.game_state.speed_multi
         self.dx = 0
 
         self.x = (canvas.winfo_width() / 2) - (self.width / 2)
@@ -277,7 +284,8 @@ class Paddle:
         else:
             self.dx = 0
 
-    def draw(self):
+    def move(self):
+        self.update_speed()
         x1, y1, x2, y2 = self.canvas.coords(self.id)
         canvas_width = self.canvas.winfo_width()
 
@@ -287,5 +295,8 @@ class Paddle:
             self.canvas.move(self.id, canvas_width - x2, 0)
         else:
             self.canvas.move(self.id, self.dx, 0)
+
+    def update_speed(self):
+        self.speed = 3 * self.game_state.speed_multi
 
 
