@@ -45,34 +45,25 @@ class Game:
             self.loop()
 
     def loop(self):
-        if self.window.run and self.state.play and not self.loop_running:
-            self.loop_running = True
-            self._loop_step()
+        if self.window.run and self.state.play:
+            if self.state.debug:
+                print("[LOOP] Ball velocity:", self.ball.movex, self.ball.movey)
+                print("[LOOP] Ball object id:", self.ball.id)
 
-    def _loop_step(self):
-        if not self.state.play:
-            self.loop_running = False
-            return
+            self.ball.collision_check()
+            self.state.update_lifeboard()
+            self.state.init_countdown()
+            self.paddle.draw()
+            self.ball.move()
 
-        if self.state.debug:
-            print("[LOOP] Ball velocity:", self.ball.movex, self.ball.movey)
-            print("[LOOP] Ball object id:", self.ball.id)
+            if self.state.lives_left <= 0 or self.state.num_bricks <= 0:
+                self.state.play = False
+                self.state.display_menu()
+                self.state.lives_left = 3
+                self.state.num_bricks = 100
+            else:
+                self.window.root.after(16, self.loop)  # Schedule the next callback
 
-        self.ball.collision_check()
-        self.state.update_lifeboard()
-        self.state.init_countdown()
-        self.paddle.draw()
-        self.ball.move()
-
-        if self.state.lives_left <= 0 or self.state.num_bricks <= 0:
-            self.state.play = False
-            self.state.display_menu()
-            self.state.lives_left = 3
-            self.state.num_bricks = 100
-        else:
-            if self._loop_id:
-                self.window.root.after_cancel(self._loop_id)  # Cancel any existing callback
-            self._loop_id = self.window.root.after(16, self._loop_step)  # Schedule the next callback
 
 def main():
     game = Game()
