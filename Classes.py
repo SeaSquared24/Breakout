@@ -251,28 +251,41 @@ class Paddle:
             fill='black', tags='paddle'
         )
 
+        # Track currently pressed keys
+        self.keys_held = set()
+
         # Bind key events
-        self.canvas.bind_all("<Left>", self.move_left)
-        self.canvas.bind_all("<Right>", self.move_right)
-        self.canvas.bind_all("<KeyRelease-Left>", self.stop)
-        self.canvas.bind_all("<KeyRelease-Right>", self.stop)
+        self.canvas.bind_all("<KeyPress-Left>", self.key_down)
+        self.canvas.bind_all("<KeyPress-Right>", self.key_down)
+        self.canvas.bind_all("<KeyRelease-Left>", self.key_up)
+        self.canvas.bind_all("<KeyRelease-Right>", self.key_up)
+
+    def key_down(self, event):
+        self.keys_held.add(event.keysym)
+        self.update_direction()
+
+    def key_up(self, event):
+        self.keys_held.discard(event.keysym)
+        self.update_direction()
+
+    def update_direction(self):
+        # Determine direction based on the last key still held
+        if 'Right' in self.keys_held and 'Left' not in self.keys_held:
+            self.dx = self.speed
+        elif 'Left' in self.keys_held and 'Right' not in self.keys_held:
+            self.dx = -self.speed
+        else:
+            self.dx = 0
 
     def draw(self):
-        # Get current paddle coordinates
         x1, y1, x2, y2 = self.canvas.coords(self.id)
+        canvas_width = self.canvas.winfo_width()
 
-        # Check if move is within canvas bounds
-        if (x1 + self.dx >= 0) and (x2 + self.dx <= self.canvas.winfo_width()):
-            self.canvas.move(self.id, self.dx, 0)
+        if x1 + self.dx < 0:
+            self.canvas.move(self.id, -x1, 0)
+        elif x2 + self.dx > canvas_width:
+            self.canvas.move(self.id, canvas_width - x2, 0)
         else:
-            self.dx = 0  # Prevent further movement in that direction
+            self.canvas.move(self.id, self.dx, 0)
 
-    def move_left(self, event):
-        self.dx = -self.speed
-
-    def move_right(self, event):
-        self.dx = self.speed
-
-    def stop(self, event):
-        self.dx = 0
 
