@@ -32,9 +32,30 @@ class Game:
         self.ball = None
         self.paddle = None
         self.bricks = None
+        self.paused = False
 
         self.state.display_menu()
+
+        # Bindings
         self.canvas.bind_all("<Return>", self.start_game)
+        self.canvas.bind_all("<space>", self.toggle_pause)
+
+    def toggle_pause(self, event=None):
+        if self.state.play:  # Only allow pause if game is running
+            self.paused = not self.paused
+            if self.paused:
+                self.canvas.create_text(
+                    Window.canvas_width / 2,
+                    Window.canvas_height / 2,
+                    text="Paused",
+                    font=("Arial", 30),
+                    fill="gray",
+                    tags="pause_text"
+                )
+            else:
+                self.canvas.delete("pause_text")
+                self.loop()  # Resume the loop
+
 
     def init_border(self):
         self.border_id = self.canvas.create_rectangle(0, Window.offset_y - 10, Window.canvas_width, Window.offset_y - 7, fill='black')
@@ -56,7 +77,7 @@ class Game:
             self.loop()
 
     def loop(self):
-        if self.window.run and self.state.play:
+        if self.window.run and self.state.play and not self.paused:
             if self.state.debug:
                 print("[LOOP] Ball velocity:", self.ball.movex, self.ball.movey)
                 print("[LOOP] Ball object id:", self.ball.id)
@@ -116,7 +137,7 @@ class GameState:
         elif winner:
             return "Congrats!\nPress Enter to Play Again."
         else:
-            return "Press Enter to Play.\n\nUse Left and Right\narrow keys to move."
+            return "Press Enter to Play.\n\nUse Left and Right\narrow keys to move.\n\nSpacebar to Pause."
 
     def update_lifeboard(self):
         if not self.canvas.find_withtag('lifeboard'):
