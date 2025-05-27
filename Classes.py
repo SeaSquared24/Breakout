@@ -23,6 +23,58 @@ class Window:
         self.run = False
         self.root.destroy()
 
+class Game:
+    def __init__(self):
+        self.window = Window()
+        self.canvas = self.window.canvas
+        self.state = GameState(self.canvas) # GameState class initialized and assigned to state
+
+        self.ball = None
+        self.paddle = None
+        self.bricks = None
+
+        self.state.display_menu()
+        self.canvas.bind_all("<Return>", self.start_game)
+
+    def init_border(self):
+        self.border_id = self.canvas.create_rectangle(0, Window.offset_y - 10, Window.canvas_width, Window.offset_y - 7, fill='black')
+        return self.border_id
+
+    def start_game(self, event=None):
+        if not self.state.play:
+            self.state.play = True
+            self.state.lives_left = 3 # reset counters
+            self.state.num_bricks = 100
+            self.state.speed_multi = 1
+            self.canvas.delete("all")  # Clear old elements
+
+            self.border_id = self.init_border()
+            self.ball = Ball(self.canvas, game_state=self.state)
+            self.paddle = Paddle(self.canvas, game_state=self.state)
+            self.bricks = Bricks(self.canvas)
+
+            self.loop()
+
+    def loop(self):
+        if self.window.run and self.state.play:
+            if self.state.debug:
+                print("[LOOP] Ball velocity:", self.ball.movex, self.ball.movey)
+                print("[LOOP] Ball object id:", self.ball.id)
+
+            self.ball.collision_check()
+            self.state.update_lifeboard()
+            self.state.init_countdown()
+            self.paddle.move()
+            self.ball.move()
+
+            if self.state.lives_left <= 0 or self.state.num_bricks <= 0:
+                self.state.play = False
+                self.state.display_menu()
+                self.state.lives_left = 3
+                self.state.num_bricks = 100
+            else:
+                self.window.root.after(16, self.loop)  # Schedule the next callback
+
 class GameState:
     def __init__(self, canvas):
         self.debug = False
@@ -64,7 +116,7 @@ class GameState:
         elif winner:
             return "Congrats!\nPress Enter to Play Again."
         else:
-            return "Press Enter to Play."
+            return "Press Enter to Play.\n\nUse Left and Right\narrow keys to move."
 
     def update_lifeboard(self):
         if not self.canvas.find_withtag('lifeboard'):
@@ -80,7 +132,7 @@ class GameState:
             return self.canvas.itemconfig(self.lifeboard_id, text=f'Lives: {self.lives_left}')
 
     def init_countdown(self):
-        if 0 < self.cntdwn < 4:
+        if 0 < self.cntdwn < 4 and self.num_bricks > 10: # don't run on last ten bricks
             if not self.canvas.find_withtag('countdown'):
                 self.countdown_id = self.canvas.create_text(
                     0,
@@ -168,16 +220,34 @@ class Ball:
         self.movey = self.dy * self.game_state.speed_multi
 
     def move(self):
-        self.update_movement() # Ensure correct velocity is passed to self.canvas.move
+        self.update_movement()  # Sets self.movex, self.movey from self.dx, self.dy
         self.canvas.move(self.id, self.movex, self.movey)
         self.velocity_debug()
-        coords = self.canvas.coords(self.id)
 
-        if coords[0] <= 0 or coords[2] >= self.canvas.winfo_width(): # sides
-            self.dx *= -1
-        elif coords[1] <= Window.offset_y: # top
-            self.dy *= -1
-        elif coords[3] >= self.canvas.winfo_height(): # bottom
+        coords = self.canvas.coords(self.id)
+        left, top, right, bottom = coords
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+
+        # Bounce off left or right walls
+        if left <= 0:
+            self.dx = abs(self.dx)
+            if left < -self.radius:  # only clamp if it's *too far* outside
+                self.canvas.move(self.id, -left + self.radius, 0)
+
+        elif right >= canvas_width:
+            self.dx = -abs(self.dx)
+            if right > canvas_width + self.radius:
+                self.canvas.move(self.id, canvas_width - right - self.radius, 0)
+
+        # Bounce off top wall
+        if top <= Window.offset_y:
+            self.dy = abs(self.dy)
+            if top < Window.offset_y - self.radius:
+                self.canvas.move(self.id, 0, Window.offset_y - top + self.radius)
+
+        # Hit bottom (lose life)
+        elif bottom >= canvas_height:
             if self.game_state:
                 self.game_state.lives_left -= 1
                 if self.game_state.lives_left <= 0:

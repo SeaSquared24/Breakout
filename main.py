@@ -1,6 +1,10 @@
 from Classes import *
 
 """
+This version of Breakout was designed to teach myself python Classes and how to create graphical programs outside
+of the Code in Place IDE. I learned a lot about how tkinter canvas works in the real world and using .after instead of 
+a time.sleep delay. Below are notes I made as I was making modifications. 
+
 Basically what I've learned here is that the Game class needs to initialize in order to have a state to pass into other
 class methods, in this case, when initializing the ball so that ball.<methods> can update the game state and have access
 to the current correct information.
@@ -14,56 +18,6 @@ And I FINALLY fixed the randomly speeding up issue. Turns out it was a performan
 canvas' .itemconfig method. The program no longer drops frames due to canvas having to redraw both the life and countdown
 timers every frame.
 """
-class Game:
-    def __init__(self):
-        self.window = Window()
-        self.canvas = self.window.canvas
-        self.state = GameState(self.canvas) # GameState class initialized and assigned to state
-        self.loop_running = False
-        self._loop_id = None  # Track the scheduled callback ID
-
-        self.ball = None
-        self.paddle = None
-        self.bricks = None
-
-        self.state.display_menu()
-        self.canvas.bind_all("<Return>", self.start_game)
-
-    def start_game(self, event=None):
-        if not self.state.play:
-            self.state.play = True
-            self.state.lives_left = 3 # reset counters
-            self.state.num_bricks = 100
-            self.canvas.delete("all")  # Clear old elements
-
-            self.ball = Ball(self.canvas, game_state=self.state)
-            self.paddle = Paddle(self.canvas, game_state=self.state)
-            self.bricks = Bricks(self.canvas)
-
-            self.loop_running = False
-            self._loop_id = None  # Reset the callback ID
-            self.loop()
-
-    def loop(self):
-        if self.window.run and self.state.play:
-            if self.state.debug:
-                print("[LOOP] Ball velocity:", self.ball.movex, self.ball.movey)
-                print("[LOOP] Ball object id:", self.ball.id)
-
-            self.ball.collision_check()
-            self.state.update_lifeboard()
-            self.state.init_countdown()
-            self.paddle.move()
-            self.ball.move()
-
-            if self.state.lives_left <= 0 or self.state.num_bricks <= 0:
-                self.state.play = False
-                self.state.display_menu()
-                self.state.lives_left = 3
-                self.state.num_bricks = 100
-            else:
-                self.window.root.after(16, self.loop)  # Schedule the next callback
-
 
 def main():
     game = Game()
